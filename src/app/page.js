@@ -1,95 +1,212 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+'use client';
+
+import { useEffect, useState } from 'react';
+import { Modal, Button, Form, Card, Container, Row, Col } from 'react-bootstrap';
 
 export default function Home() {
-  return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol>
-          <li>
-            Get started by editing <code>src/app/page.js</code>.
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [showModal, setShowModal] = useState(false);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [movies, setMovies] = useState([]);
+  const [isClient, setIsClient] = useState(false);
+  const [loggedInUser, setLoggedInUser] = useState(null);
 
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.secondary}
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className={styles.footer}>
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+  useEffect(() => {
+    setIsClient(true);
+    const stored = localStorage.getItem('user');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (parsed.user) {
+        setLoggedInUser(parsed.user);
+        fetchRecommendations(parsed.user);
+      }
+    }
+  }, []);
+
+  const handleLogin = () => {
+    const user = username.trim().replace(/\s+/g, '_');
+    localStorage.setItem('user', JSON.stringify({ user, password }));
+    setLoggedInUser(user);
+    setShowModal(false);
+    fetchRecommendations(user);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    setMovies([]);
+    setLoggedInUser(null);
+    setShowModal(true);
+  };
+
+  const fetchRecommendations = async (storedUser) => {
+    const user = storedUser || JSON.parse(localStorage.getItem('user'))?.user;
+    if (!user) return;
+
+    try {
+      const res = await fetch(`/api/recommend?user=${user}`);
+      const data = await res.json();
+      setMovies(data);
+    } catch (err) {
+      console.error('Failed to fetch recommendations:', err);
+    }
+  };
+
+  if (!isClient) return null;
+
+  return (
+    <Container className="mt-4">
+      <h1 className="text-white text-center">🎬 NeuraFlix</h1>
+
+      <div className="text-center my-4">
+        {!loggedInUser ? (
+          <Button onClick={() => setShowModal(true)}>Login</Button>
+        ) : (
+          <div>
+            <p className="text-white">Welcome, {loggedInUser}!</p>
+            <Button variant="danger" onClick={handleLogout}>Logout</Button>
+          </div>
+        )}
+      </div>
+
+      <Row xs={1} sm={2} md={3} lg={4}>
+        {movies.map((movie, index) => (
+          <Col key={index} className="mb-4">
+            <Card bg="dark" text="white">
+              <Card.Body>
+                <Card.Title>{movie.title}</Card.Title>
+                <Card.Text>{movie.genre}</Card.Text>
+                <Card.Text><small>{movie.year}</small></Card.Text>
+              </Card.Body>
+            </Card>
+          </Col>
+        ))}
+      </Row>
+
+      <Modal show={showModal} onHide={() => setShowModal(false)}>
+        <Modal.Header closeButton>
+          <Modal.Title>Login</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form>
+            <Form.Group>
+              <Form.Label>Username</Form.Label>
+              <Form.Control
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Enter username"
+              />
+            </Form.Group>
+            <Form.Group className="mt-3">
+              <Form.Label>Password</Form.Label>
+              <Form.Control
+                type="password"
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter password"
+              />
+            </Form.Group>
+            <Button className="mt-4 w-100" onClick={handleLogin}>
+              Submit
+            </Button>
+          </Form>
+        </Modal.Body>
+      </Modal>
+    </Container>
   );
 }
+
+
+// 'use client';
+
+// import { useEffect, useState } from 'react';
+// import { Modal, Button, Form, Card, Container, Row, Col } from 'react-bootstrap';
+
+// export default function Home() {
+//   const [showModal, setShowModal] = useState(false);
+//   const [username, setUsername] = useState('');
+//   const [password, setPassword] = useState('');
+//   const [movies, setMovies] = useState([]);
+//   const [isClient, setIsClient] = useState(false);
+
+//   // Ensure this only runs on the client to avoid hydration errors
+//   useEffect(() => {
+//     setIsClient(true);
+//     const stored = localStorage.getItem('user');
+//     if (stored) {
+//       const parsed = JSON.parse(stored);
+//       if (parsed.user) fetchRecommendations(parsed.user);
+//     }
+//   }, []);
+
+//   const handleLogin = () => {
+//     const user = username.trim().replace(/\s+/g, '_');
+//     localStorage.setItem('user', JSON.stringify({ user, password }));
+//     setShowModal(false);
+//     fetchRecommendations(user);
+//   };
+
+//   const fetchRecommendations = async (storedUser) => {
+//     const user = storedUser || JSON.parse(localStorage.getItem('user'))?.user;
+//     if (!user) return;
+
+//     try {
+//       const res = await fetch(`/api/recommend?user=${user}`);
+//       const data = await res.json();
+//       setMovies(data);
+//     } catch (err) {
+//       console.error('Failed to fetch recommendations:', err);
+//     }
+//   };
+
+//   if (!isClient) return null; // Avoid mismatches with SSR
+
+//   return (
+//     <Container className="mt-4">
+//       <h1 className="text-white text-center">🎬 NeuraFlix</h1>
+
+//       <div className="text-center my-4">
+//         <Button onClick={() => setShowModal(true)}>Login</Button>
+//       </div>
+
+//       <Row xs={1} sm={2} md={3} lg={4}>
+//         {movies.map((movie, index) => (
+//           <Col key={index} className="mb-4">
+//             <Card bg="dark" text="white">
+//               <Card.Body>
+//                 <Card.Title>{movie.title}</Card.Title>
+//                 <Card.Text>{movie.genre}</Card.Text>
+//                 <Card.Text><small>{movie.year}</small></Card.Text>
+//               </Card.Body>
+//             </Card>
+//           </Col>
+//         ))}
+//       </Row>
+
+//       <Modal show={showModal} onHide={() => setShowModal(false)}>
+//         <Modal.Header closeButton>
+//           <Modal.Title>Login</Modal.Title>
+//         </Modal.Header>
+//         <Modal.Body>
+//           <Form>
+//             <Form.Group>
+//               <Form.Label>Username</Form.Label>
+//               <Form.Control
+//                 onChange={(e) => setUsername(e.target.value)}
+//                 placeholder="Enter username"
+//               />
+//             </Form.Group>
+//             <Form.Group className="mt-3">
+//               <Form.Label>Password</Form.Label>
+//               <Form.Control
+//                 type="password"
+//                 onChange={(e) => setPassword(e.target.value)}
+//                 placeholder="Enter password"
+//               />
+//             </Form.Group>
+//             <Button className="mt-4 w-100" onClick={handleLogin}>
+//               Submit
+//             </Button>
+//           </Form>
+//         </Modal.Body>
+//       </Modal>
+//     </Container>
+//   );
+// }
