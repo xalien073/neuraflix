@@ -19,8 +19,10 @@ export default function Home() {
       if (parsed.user) {
         setLoggedInUser(parsed.user);
         fetchRecommendations(parsed.user);
+        return;
       }
     }
+    fetchRecommendations(); // fetch generic movies if not logged in
   }, []);
 
   const handleLogin = () => {
@@ -33,17 +35,14 @@ export default function Home() {
 
   const handleLogout = () => {
     localStorage.removeItem('user');
-    setMovies([]);
     setLoggedInUser(null);
-    setShowModal(true);
+    // setMovies([]);
+    // fetchRecommendations(); // fallback to default/generic movies
   };
 
-  const fetchRecommendations = async (storedUser) => {
-    const user = storedUser || JSON.parse(localStorage.getItem('user'))?.user;
-    if (!user) return;
-
+  const fetchRecommendations = async (user = '') => {
     try {
-      const res = await fetch(`/api/recommend?user=${user}`);
+      const res = await fetch(`/api/recommend${user ? `?user=${user}` : ''}`);
       const data = await res.json();
       setMovies(data);
     } catch (err) {
@@ -55,23 +54,36 @@ export default function Home() {
 
   return (
     <Container className="mt-4">
-      <h1 className="text-white text-center">🎬 NeuraFlix</h1>
+      {/* Header section with title and auth controls */}
+      <Row className="align-items-center mb-4">
+        <Col>
+          <h1 className="text-white">🎬 NeuraFlix</h1>
+        </Col>
+        <Col className="text-end">
+          {loggedInUser ? (
+            <>
+              <span className="text-white me-3">Welcome, {loggedInUser}!</span>
+              <Button variant="danger" onClick={handleLogout}>Logout</Button>
+            </>
+          ) : (
+            <Button onClick={() => setShowModal(true)}>Login</Button>
+          )}
+        </Col>
+      </Row>
 
-      <div className="text-center my-4">
-        {!loggedInUser ? (
-          <Button onClick={() => setShowModal(true)}>Login</Button>
-        ) : (
-          <div>
-            <p className="text-white">Welcome, {loggedInUser}!</p>
-            <Button variant="danger" onClick={handleLogout}>Logout</Button>
-          </div>
-        )}
-      </div>
-
-      <Row xs={1} sm={2} md={3} lg={4}>
+      {/* Movies display */}
+      <Row xs={1} md={3} className="g-4">
         {movies.map((movie, index) => (
-          <Col key={index} className="mb-4">
-            <Card bg="dark" text="white">
+          <Col key={index}>
+            <Card bg="dark" text="white" className="h-100">
+              {movie.thumbnail && (
+                <Card.Img
+                  variant="top"
+                  src={movie.thumbnail}
+                  alt={`${movie.title} thumbnail`}
+                  style={{ objectFit: 'cover', height: '300px' }}
+                />
+              )}
               <Card.Body>
                 <Card.Title>{movie.title}</Card.Title>
                 <Card.Text>{movie.genre}</Card.Text>
@@ -82,6 +94,7 @@ export default function Home() {
         ))}
       </Row>
 
+      {/* Login Modal */}
       <Modal show={showModal} onHide={() => setShowModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>Login</Modal.Title>
@@ -125,22 +138,33 @@ export default function Home() {
 //   const [password, setPassword] = useState('');
 //   const [movies, setMovies] = useState([]);
 //   const [isClient, setIsClient] = useState(false);
+//   const [loggedInUser, setLoggedInUser] = useState(null);
 
-//   // Ensure this only runs on the client to avoid hydration errors
 //   useEffect(() => {
 //     setIsClient(true);
 //     const stored = localStorage.getItem('user');
 //     if (stored) {
 //       const parsed = JSON.parse(stored);
-//       if (parsed.user) fetchRecommendations(parsed.user);
+//       if (parsed.user) {
+//         setLoggedInUser(parsed.user);
+//         fetchRecommendations(parsed.user);
+//       }
 //     }
 //   }, []);
 
 //   const handleLogin = () => {
 //     const user = username.trim().replace(/\s+/g, '_');
 //     localStorage.setItem('user', JSON.stringify({ user, password }));
+//     setLoggedInUser(user);
 //     setShowModal(false);
 //     fetchRecommendations(user);
+//   };
+
+//   const handleLogout = () => {
+//     localStorage.removeItem('user');
+//     setMovies([]);
+//     setLoggedInUser(null);
+//     setShowModal(true);
 //   };
 
 //   const fetchRecommendations = async (storedUser) => {
@@ -156,20 +180,35 @@ export default function Home() {
 //     }
 //   };
 
-//   if (!isClient) return null; // Avoid mismatches with SSR
+//   if (!isClient) return null;
 
 //   return (
 //     <Container className="mt-4">
 //       <h1 className="text-white text-center">🎬 NeuraFlix</h1>
 
 //       <div className="text-center my-4">
-//         <Button onClick={() => setShowModal(true)}>Login</Button>
+//         {!loggedInUser ? (
+//           <Button onClick={() => setShowModal(true)}>Login</Button>
+//         ) : (
+//           <div>
+//             <p className="text-white">Welcome, {loggedInUser}!</p>
+//             <Button variant="danger" onClick={handleLogout}>Logout</Button>
+//           </div>
+//         )}
 //       </div>
 
-//       <Row xs={1} sm={2} md={3} lg={4}>
+//       <Row xs={1} md={3} className="g-4">
 //         {movies.map((movie, index) => (
-//           <Col key={index} className="mb-4">
-//             <Card bg="dark" text="white">
+//           <Col key={index}>
+//             <Card bg="dark" text="white" className="h-100">
+//               {movie.thumbnail && (
+//                 <Card.Img
+//                   variant="top"
+//                   src={movie.thumbnail}
+//                   alt={`${movie.title} thumbnail`}
+//                   style={{ objectFit: 'cover', height: '300px' }}
+//                 />
+//               )}
 //               <Card.Body>
 //                 <Card.Title>{movie.title}</Card.Title>
 //                 <Card.Text>{movie.genre}</Card.Text>
@@ -210,3 +249,4 @@ export default function Home() {
 //     </Container>
 //   );
 // }
+
