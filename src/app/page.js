@@ -1,4 +1,3 @@
-// app/page.js
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -23,7 +22,7 @@ export default function Home() {
         return;
       }
     }
-    fetchRecommendations(); // fetch generic movies if not logged in
+    fetchRecommendations();
   }, []);
 
   const handleLogin = () => {
@@ -37,8 +36,6 @@ export default function Home() {
   const handleLogout = () => {
     localStorage.removeItem('user');
     setLoggedInUser(null);
-    // setMovies([]);
-    // fetchRecommendations(); // fallback to default/generic movies
   };
 
   const fetchRecommendations = async (user = '') => {
@@ -51,11 +48,36 @@ export default function Home() {
     }
   };
 
+  const handleWatch = async (movieId) => {
+    if (!loggedInUser) {
+      alert('Please login to Watch!');
+      return;
+    }
+    try {
+      const res = await fetch('/api/watched', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user: loggedInUser,
+          movie: movieId
+        })
+      });
+      if (res.ok) {
+        alert(`Marked as watched: ${movieId}`);
+        fetchRecommendations(loggedInUser);
+      } else {
+        const err = await res.json();
+        alert(`Failed to mark as watched: ${err.error}`);
+      }
+    } catch (err) {
+      console.error('Error marking as watched:', err);
+    }
+  };
+
   if (!isClient) return null;
 
   return (
     <Container className="mt-4">
-      {/* Header section with title and auth controls */}
       <Row className="align-items-center mb-4">
         <Col>
           <h1 className="text-white">🎬 NeuraFlix</h1>
@@ -72,7 +94,6 @@ export default function Home() {
         </Col>
       </Row>
 
-      {/* Movies display */}
       <Row xs={1} md={3} className="g-4">
         {movies.map((movie, index) => (
           <Col key={index}>
@@ -89,13 +110,19 @@ export default function Home() {
                 <Card.Title>{movie.title}</Card.Title>
                 <Card.Text>{movie.genre}</Card.Text>
                 <Card.Text><small>{movie.year}</small></Card.Text>
+                <Button
+                  variant="success"
+                  className="mt-2 w-100"
+                  onClick={() => handleWatch(movie.id)}
+                >
+                  Watch
+                </Button>
               </Card.Body>
             </Card>
           </Col>
         ))}
       </Row>
 
-      {/* Login Modal */}
       <Modal show={showModal} onHide={() => setShowModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>Login</Modal.Title>
@@ -128,6 +155,7 @@ export default function Home() {
 }
 
 
+// // app/page.js
 // 'use client';
 
 // import { useEffect, useState } from 'react';
@@ -149,8 +177,10 @@ export default function Home() {
 //       if (parsed.user) {
 //         setLoggedInUser(parsed.user);
 //         fetchRecommendations(parsed.user);
+//         return;
 //       }
 //     }
+//     fetchRecommendations(); // fetch generic movies if not logged in
 //   }, []);
 
 //   const handleLogin = () => {
@@ -163,17 +193,14 @@ export default function Home() {
 
 //   const handleLogout = () => {
 //     localStorage.removeItem('user');
-//     setMovies([]);
 //     setLoggedInUser(null);
-//     setShowModal(true);
+//     // setMovies([]);
+//     // fetchRecommendations(); // fallback to default/generic movies
 //   };
 
-//   const fetchRecommendations = async (storedUser) => {
-//     const user = storedUser || JSON.parse(localStorage.getItem('user'))?.user;
-//     if (!user) return;
-
+//   const fetchRecommendations = async (user = '') => {
 //     try {
-//       const res = await fetch(`/api/recommend?user=${user}`);
+//       const res = await fetch(`/api/recommend${user ? `?user=${user}` : ''}`);
 //       const data = await res.json();
 //       setMovies(data);
 //     } catch (err) {
@@ -185,19 +212,24 @@ export default function Home() {
 
 //   return (
 //     <Container className="mt-4">
-//       <h1 className="text-white text-center">🎬 NeuraFlix</h1>
+//       {/* Header section with title and auth controls */}
+//       <Row className="align-items-center mb-4">
+//         <Col>
+//           <h1 className="text-white">🎬 NeuraFlix</h1>
+//         </Col>
+//         <Col className="text-end">
+//           {loggedInUser ? (
+//             <>
+//               <span className="text-white me-3">Welcome, {loggedInUser}!</span>
+//               <Button variant="danger" onClick={handleLogout}>Logout</Button>
+//             </>
+//           ) : (
+//             <Button onClick={() => setShowModal(true)}>Login</Button>
+//           )}
+//         </Col>
+//       </Row>
 
-//       <div className="text-center my-4">
-//         {!loggedInUser ? (
-//           <Button onClick={() => setShowModal(true)}>Login</Button>
-//         ) : (
-//           <div>
-//             <p className="text-white">Welcome, {loggedInUser}!</p>
-//             <Button variant="danger" onClick={handleLogout}>Logout</Button>
-//           </div>
-//         )}
-//       </div>
-
+//       {/* Movies display */}
 //       <Row xs={1} md={3} className="g-4">
 //         {movies.map((movie, index) => (
 //           <Col key={index}>
@@ -220,6 +252,7 @@ export default function Home() {
 //         ))}
 //       </Row>
 
+//       {/* Login Modal */}
 //       <Modal show={showModal} onHide={() => setShowModal(false)}>
 //         <Modal.Header closeButton>
 //           <Modal.Title>Login</Modal.Title>
@@ -250,4 +283,5 @@ export default function Home() {
 //     </Container>
 //   );
 // }
+
 
