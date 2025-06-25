@@ -2,9 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import { Modal, Button, Form, Card, Container, Row, Col } from 'react-bootstrap';
+import { useRouter } from 'next/navigation';
 
 export default function Home() {
+  const router = useRouter();
   const [showModal, setShowModal] = useState(false);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [selectedMovie, setSelectedMovie] = useState(null);
+  const [rating, setRating] = useState(0);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [movies, setMovies] = useState([]);
@@ -32,12 +37,12 @@ export default function Home() {
     setShowModal(false);
     fetchRecommendations(user);
   };
-
+  
   const handleLogout = () => {
     localStorage.removeItem('user');
     setLoggedInUser(null);
   };
-
+  
   const fetchRecommendations = async (user = '') => {
     try {
       const res = await fetch(`/api/recommend${user ? `?user=${user}` : ''}`);
@@ -47,8 +52,8 @@ export default function Home() {
       console.error('Failed to fetch recommendations:', err);
     }
   };
-
-  const handleWatch = async (movieId) => {
+  
+  const handleWatch = async (movieId, movieTitle, movieGenre, movieYear, movieThumbnail) => {
     if (!loggedInUser) {
       alert('Please login to Watch!');
       return;
@@ -63,7 +68,7 @@ export default function Home() {
         })
       });
       if (res.ok) {
-        alert(`Marked as watched: ${movieId}`);
+        alert(`Inserted an edge called Watched from ${loggedInUser} to ${movieId}`);
         fetchRecommendations(loggedInUser);
       } else {
         const err = await res.json();
@@ -71,9 +76,60 @@ export default function Home() {
       }
     } catch (err) {
       console.error('Error marking as watched:', err);
+      alert(`Failed to mark as watched: ${err.error}`);
+    } finally {
+    // Append query parameters
+    const query = new URLSearchParams({
+      movieId,
+      movieTitle,
+      movieGenre,
+      movieYear,
+      movieThumbnail,
+    }).toString();
+
+    router.push(`/movies/${movieId}?${query}`);
     }
   };
-
+  
+  const openReviewModal = (movie) => {
+    setSelectedMovie(movie);
+    setRating(0);
+    setShowReviewModal(true);
+  };
+  
+  const handleReviewSubmit = async () => {
+    if (!loggedInUser) {
+      alert('Please login to review!');
+      return;
+    }
+    try {
+      const reviewDate = new Date().toISOString().split('T')[0];
+      const res = await fetch('/api/review', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          user: loggedInUser,
+          movie: selectedMovie.id,
+          rating,
+          reviewDate
+        })
+      });
+      if (res.ok) {
+        alert(`Review submitted for ${selectedMovie.id}!`);
+        fetchRecommendations(loggedInUser);
+      } else {
+        const error = await res.json();
+        alert(`Review failed: ${error.error}`);
+      }
+    } catch (error) {
+      console.error(error);
+      alert('Error submitting review');
+    } finally {
+      setShowReviewModal(false);
+      
+    }
+  };
+  
   if (!isClient) return null;
 
   return (
@@ -113,16 +169,26 @@ export default function Home() {
                 <Button
                   variant="success"
                   className="mt-2 w-100"
-                  onClick={() => handleWatch(movie.id)}
+                  onClick={() => handleWatch(movie.id, movie.title, movie.genre, movie.year, movie.thumbnail)}
                 >
                   Watch
                 </Button>
+                {loggedInUser && (
+                  <Button
+                    variant="info"
+                    className="mt-2 w-100"
+                    onClick={() => openReviewModal(movie)}
+                  >
+                    Review
+                  </Button>
+                )}
               </Card.Body>
             </Card>
           </Col>
         ))}
       </Row>
 
+      {/* Login Modal */}
       <Modal show={showModal} onHide={() => setShowModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>Login</Modal.Title>
@@ -150,12 +216,32 @@ export default function Home() {
           </Form>
         </Modal.Body>
       </Modal>
+
+      {/* Review Modal */}
+      <Modal show={showReviewModal} onHide={() => setShowReviewModal(false)}>
+        <Modal.Header closeButton>
+          <Modal.Title>Review: {selectedMovie?.title}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form.Group>
+            <Form.Label>Rating (0–5)</Form.Label>
+            <Form.Control
+              type="number"
+              min="0"
+              max="5"
+              value={rating}
+              onChange={(e) => setRating(parseInt(e.target.value, 10))}
+            />
+          </Form.Group>
+          <Button className="mt-3 w-100" onClick={handleReviewSubmit}>
+            Submit Review
+          </Button>
+        </Modal.Body>
+      </Modal>
     </Container>
   );
 }
 
-
-// // app/page.js
 // 'use client';
 
 // import { useEffect, useState } from 'react';
@@ -180,7 +266,7 @@ export default function Home() {
 //         return;
 //       }
 //     }
-//     fetchRecommendations(); // fetch generic movies if not logged in
+//     fetchRecommendations();
 //   }, []);
 
 //   const handleLogin = () => {
@@ -194,8 +280,6 @@ export default function Home() {
 //   const handleLogout = () => {
 //     localStorage.removeItem('user');
 //     setLoggedInUser(null);
-//     // setMovies([]);
-//     // fetchRecommendations(); // fallback to default/generic movies
 //   };
 
 //   const fetchRecommendations = async (user = '') => {
@@ -208,11 +292,36 @@ export default function Home() {
 //     }
 //   };
 
+//   const handleWatch = async (movieId) => {
+//     if (!loggedInUser) {
+//       alert('Please login to Watch!');
+//       return;
+//     }
+//     try {
+//       const res = await fetch('/api/watched', {
+//         method: 'POST',
+//         headers: { 'Content-Type': 'application/json' },
+//         body: JSON.stringify({
+//           user: loggedInUser,
+//           movie: movieId
+//         })
+//       });
+//       if (res.ok) {
+//         alert(`Marked as watched: ${movieId}`);
+//         fetchRecommendations(loggedInUser);
+//       } else {
+//         const err = await res.json();
+//         alert(`Failed to mark as watched: ${err.error}`);
+//       }
+//     } catch (err) {
+//       console.error('Error marking as watched:', err);
+//     }
+//   };
+
 //   if (!isClient) return null;
 
 //   return (
 //     <Container className="mt-4">
-//       {/* Header section with title and auth controls */}
 //       <Row className="align-items-center mb-4">
 //         <Col>
 //           <h1 className="text-white">🎬 NeuraFlix</h1>
@@ -229,7 +338,6 @@ export default function Home() {
 //         </Col>
 //       </Row>
 
-//       {/* Movies display */}
 //       <Row xs={1} md={3} className="g-4">
 //         {movies.map((movie, index) => (
 //           <Col key={index}>
@@ -246,13 +354,19 @@ export default function Home() {
 //                 <Card.Title>{movie.title}</Card.Title>
 //                 <Card.Text>{movie.genre}</Card.Text>
 //                 <Card.Text><small>{movie.year}</small></Card.Text>
+//                 <Button
+//                   variant="success"
+//                   className="mt-2 w-100"
+//                   onClick={() => handleWatch(movie.id)}
+//                 >
+//                   Watch
+//                 </Button>
 //               </Card.Body>
 //             </Card>
 //           </Col>
 //         ))}
 //       </Row>
 
-//       {/* Login Modal */}
 //       <Modal show={showModal} onHide={() => setShowModal(false)}>
 //         <Modal.Header closeButton>
 //           <Modal.Title>Login</Modal.Title>
@@ -285,3 +399,4 @@ export default function Home() {
 // }
 
 
+// // // app/page.js
