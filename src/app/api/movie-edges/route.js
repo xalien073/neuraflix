@@ -44,9 +44,12 @@ export async function GET(request) {
     // Watched
     const watchedQuery = `
       g.V().has('movie','id','${movieId}')
-        .inE('Watched')
-        .outV()
-        .values('name')
+      .inE('Watched').as('e')
+      .outV().as('user')
+      .project('user','watchDate','watchCount')
+        .by(values('name'))
+        .by(select('e').values('watchDate'))
+        .by(select('e').values('watchCount'))
     `;
     const watchedResult = await client.submit(watchedQuery);
     console.log('Watched Result', watchedResult._items);
